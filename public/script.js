@@ -1,34 +1,104 @@
-async function analyze() {
-  const home = document.getElementById("home").value;
-  const away = document.getElementById("away").value;
+// ===============================
+// BASIC CONFIG
+// ===============================
+const homeInput = document.getElementById("homeTeam");
+const awayInput = document.getElementById("awayTeam");
+const analyzeBtn = document.getElementById("analyzeBtn");
+const resultBox = document.getElementById("result");
 
-  const res = await fetch("/analyze", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ home, away })
-  });
-
-  const d = await res.json();
-
-  if (d.risk === "AVOID") {
-    document.getElementById("result").innerHTML = `
-      <div class="avoid">
-        <h3>${home} vs ${away}</h3>
-        <p>❌ AVOID</p>
-        <p>${d.reason}</p>
-      </div>
-    `;
+// ===============================
+// TEAM AUTOCOMPLETE FUNCTION
+// ===============================
+async function searchTeams(query, listElement, inputElement) {
+  if (query.length < 3) {
+    listElement.innerHTML = "";
     return;
   }
 
-  document.getElementById("result").innerHTML = `
-    <div class="ok">
-      <h3>${d.match}</h3>
-      <p><b>League:</b> ${d.league}</p>
-      <p><b>Total xG:</b> ${d.totalXG}</p>
-      <p><b>Goals:</b> ${d.goalsBet} (${d.goalsStrength})</p>
-      <p><b>Result:</b> ${d.resultBet}</p>
-      <p class="oktext">🟢 OK</p>
-    </div>
-  `;
+  try {
+    const res = await fetch(`/teams?search=${query}`);
+    const data = await res.json();
+
+    listElement.innerHTML = "";
+
+    if (!data.response) return;
+
+    data.response.forEach(item => {
+      const li = document.createElement("li");
+      li.textContent = item.team.name;
+      li.style.cursor = "pointer";
+      li.style.padding = "6px";
+      li.style.borderBottom = "1px solid #ddd";
+
+      li.onclick = () => {
+        inputElement.value = item.team.name;
+        listElement.innerHTML = "";
+      };
+
+      listElement.appendChild(li);
+    });
+  } catch (err) {
+    console.error("Team search error", err);
+  }
 }
+
+// ===============================
+// HOME TEAM AUTOCOMPLETE
+// ===============================
+homeInput.addEventListener("input", e => {
+  searchTeams(
+    e.target.value,
+    document.getElementById("homeList"),
+    homeInput
+  );
+});
+
+// ===============================
+// AWAY TEAM AUTOCOMPLETE
+// ===============================
+awayInput.addEventListener("input", e => {
+  searchTeams(
+    e.target.value,
+    document.getElementById("awayList"),
+    awayInput
+  );
+});
+
+// ===============================
+// ANALYZE MATCH
+// ===============================
+analyzeBtn.addEventListener("click", async () => {
+  const home = homeInput.value.trim();
+  const away = awayInput.value.trim();
+
+  if (!home || !away) {
+    resultBox.innerHTML = "⚠️ Please select both teams from suggestions";
+    return;
+  }
+
+  resultBox.innerHTML = "⏳ Analyzing match...";
+
+  try {
+    const res = await fetch(`/analyze?home=${home}&away=${away}`);
+    const data = await res.json();
+
+    resultBox.innerHTML = `
+      <h3>${home} vs ${away}</h3>
+      <h2>${data.category}</h2>
+      <p>${data.reason}</p>
+    `;
+  } catch (err) {
+    console.error(err);
+    resultBox.innerHTML = "❌ Error analyzing match";
+  }
+});
+
+// ===============================
+// CLOSE SUGGESTIONS ON CLICK OUTSIDE
+// ===============================
+document.addEventListener("click", e => {
+  if (!e.target.closest("input")) {
+    document.getElementById("homeList").innerHTML = "";
+    document.getElementById("awayList").innerHTML = "";
+  }
+});
