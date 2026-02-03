@@ -1,104 +1,116 @@
 // ===============================
-// BASIC CONFIG
+// SIMPLE TEAM LIST (EDITABLE)
+// ===============================
+const teams = [
+  "Manchester City",
+  "Manchester United",
+  "Arsenal",
+  "Chelsea",
+  "Liverpool",
+  "Tottenham",
+  "Barcelona",
+  "Real Madrid",
+  "Atletico Madrid",
+  "Bayern Munich",
+  "Borussia Dortmund",
+  "Juventus",
+  "Inter",
+  "AC Milan",
+  "PSG",
+  "Marseille",
+  "Ajax",
+  "Porto",
+  "Benfica",
+  "Sporting CP",
+  "Universitatea Cluj",
+  "Universitatea Craiova",
+  "FC Arges",
+  "Rapid Bucuresti",
+  "CFR Cluj",
+  "FCSB"
+];
+
+// ===============================
+// ELEMENTS
 // ===============================
 const homeInput = document.getElementById("homeTeam");
 const awayInput = document.getElementById("awayTeam");
-const analyzeBtn = document.getElementById("analyzeBtn");
+const homeList = document.getElementById("homeList");
+const awayList = document.getElementById("awayList");
 const resultBox = document.getElementById("result");
+const analyzeBtn = document.getElementById("analyzeBtn");
 
 // ===============================
-// TEAM AUTOCOMPLETE FUNCTION
+// AUTOCOMPLETE FUNCTION
 // ===============================
-async function searchTeams(query, listElement, inputElement) {
-  if (query.length < 3) {
-    listElement.innerHTML = "";
-    return;
-  }
+function showSuggestions(value, list, input) {
+  list.innerHTML = "";
+  if (value.length < 2) return;
 
-  try {
-    const res = await fetch(`/teams?search=${query}`);
-    const data = await res.json();
-
-    listElement.innerHTML = "";
-
-    if (!data.response) return;
-
-    data.response.forEach(item => {
+  teams
+    .filter(team =>
+      team.toLowerCase().includes(value.toLowerCase())
+    )
+    .forEach(team => {
       const li = document.createElement("li");
-      li.textContent = item.team.name;
+      li.textContent = team;
       li.style.cursor = "pointer";
       li.style.padding = "6px";
-      li.style.borderBottom = "1px solid #ddd";
 
       li.onclick = () => {
-        inputElement.value = item.team.name;
-        listElement.innerHTML = "";
+        input.value = team;
+        list.innerHTML = "";
       };
 
-      listElement.appendChild(li);
+      list.appendChild(li);
     });
-  } catch (err) {
-    console.error("Team search error", err);
-  }
 }
 
 // ===============================
-// HOME TEAM AUTOCOMPLETE
+// INPUT EVENTS
 // ===============================
-homeInput.addEventListener("input", e => {
-  searchTeams(
-    e.target.value,
-    document.getElementById("homeList"),
-    homeInput
-  );
+homeInput.addEventListener("input", () => {
+  showSuggestions(homeInput.value, homeList, homeInput);
+});
+
+awayInput.addEventListener("input", () => {
+  showSuggestions(awayInput.value, awayList, awayInput);
 });
 
 // ===============================
-// AWAY TEAM AUTOCOMPLETE
+// ANALYZE BUTTON (SIMPLE LOGIC)
 // ===============================
-awayInput.addEventListener("input", e => {
-  searchTeams(
-    e.target.value,
-    document.getElementById("awayList"),
-    awayInput
-  );
-});
-
-// ===============================
-// ANALYZE MATCH
-// ===============================
-analyzeBtn.addEventListener("click", async () => {
-  const home = homeInput.value.trim();
-  const away = awayInput.value.trim();
+analyzeBtn.addEventListener("click", () => {
+  const home = homeInput.value;
+  const away = awayInput.value;
 
   if (!home || !away) {
-    resultBox.innerHTML = "⚠️ Please select both teams from suggestions";
+    resultBox.innerHTML = "⚠️ Please select both teams";
     return;
   }
 
-  resultBox.innerHTML = "⏳ Analyzing match...";
+  // VERY SIMPLE DEMO ANALYSIS
+  let category = "NEUTRAL";
 
-  try {
-    const res = await fetch(`/analyze?home=${home}&away=${away}`);
-    const data = await res.json();
-
-    resultBox.innerHTML = `
-      <h3>${home} vs ${away}</h3>
-      <h2>${data.category}</h2>
-      <p>${data.reason}</p>
-    `;
-  } catch (err) {
-    console.error(err);
-    resultBox.innerHTML = "❌ Error analyzing match";
+  if (home.includes("City") || home.includes("Madrid")) {
+    category = "HOME WIN";
+  } else if (away.includes("City") || away.includes("Madrid")) {
+    category = "AWAY WIN";
   }
+
+  resultBox.innerHTML = `
+    <h3>${home} vs ${away}</h3>
+    <h2>${category}</h2>
+    <p>This is a simple analytical suggestion.</p>
+  `;
 });
 
 // ===============================
-// CLOSE SUGGESTIONS ON CLICK OUTSIDE
+// CLOSE LIST ON OUTSIDE CLICK
 // ===============================
 document.addEventListener("click", e => {
   if (!e.target.closest("input")) {
-    document.getElementById("homeList").innerHTML = "";
-    document.getElementById("awayList").innerHTML = "";
+    homeList.innerHTML = "";
+    awayList.innerHTML = "";
   }
 });
